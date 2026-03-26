@@ -4,6 +4,12 @@ A TypeScript service that integrates with shipping carriers to fetch and normali
 
 ---
 
+## 🧪 Test Results
+
+![Test results](assets/ss.png)
+
+---
+
 ## Features
 
 * Rate fetching with normalized output
