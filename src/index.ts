@@ -1,9 +1,11 @@
 import { UPSCarrier } from "./carriers/ups.carrier";
+import { RateService } from "./services/rate.service";
 
 async function main() {
   const carrier = new UPSCarrier();
+  const rateService = new RateService(carrier);
 
-  const rates = await carrier.getRates({
+  const rates = await rateService.getRates({
     origin: {
       city: "Delhi",
       state: "DL",
