@@ -1,17 +1,17 @@
 import { Carrier } from "../core/carrier.interface";
 import { RateRequest, RateQuote } from "../core/types";
+import { getUPSToken } from "./ups.auth";
 
 export class UPSCarrier implements Carrier {
   async getRates(request: RateRequest): Promise<RateQuote[]> {
-    // build UPS request payload
-    const upsPayload = this.buildRequest(request);
+  const token = await getUPSToken();
 
-    // call UPS API (mocked)
-    const upsResponse = await this.mockApiCall(upsPayload);
+  const upsPayload = this.buildRequest(request);
 
-    // normalize response
-    return this.parseResponse(upsResponse);
-  }
+  const upsResponse = await this.callUPSApi(upsPayload, token);
+
+  return this.parseResponse(upsResponse);
+}
 
   private buildRequest(request: RateRequest) {
     // TODO: map internal request to UPS format
@@ -21,29 +21,22 @@ export class UPSCarrier implements Carrier {
     };
   }
 
-  private async mockApiCall(payload: any) {
-    // simulate API response 
-    return {
-      RateResponse: {
-        RatedShipment: [
-          {
-            Service: { Code: "03" },
-            TotalCharges: {
-              CurrencyCode: "USD",
-              MonetaryValue: "12.50",
-            },
+ private async callUPSApi(payload: any, token: string) {
+
+  return {
+    RateResponse: {
+      RatedShipment: [
+        {
+          Service: { Code: "03" },
+          TotalCharges: {
+            CurrencyCode: "USD",
+            MonetaryValue: "12.50",
           },
-          {
-            Service: { Code: "02" },
-            TotalCharges: {
-              CurrencyCode: "USD",
-              MonetaryValue: "25.00",
-            },
-          },
-        ],
-      },
-    };
-  }
+        },
+      ],
+    },
+  };
+}
 
   private parseResponse(response: any): RateQuote[] {
     const shipments = response?.RateResponse?.RatedShipment || [];
