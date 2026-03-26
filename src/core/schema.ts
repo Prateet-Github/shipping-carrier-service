@@ -22,3 +22,11 @@ export const rateRequestSchema = z.object({
   packages: z.array(packageSchema).min(1),
   serviceCode: z.string().optional(),
 });
+
+export const rateQuoteSchema = z.object({
+  carrier: z.string(),
+  service: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  estimatedDays: z.number().optional(),
+});

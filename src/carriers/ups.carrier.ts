@@ -1,8 +1,9 @@
 import { Carrier } from "../core/carrier.interface";
 import { RateRequest, RateQuote } from "../core/types";
 import { getUPSToken } from "./ups.auth";
-import { rateRequestSchema } from "./../core/schema";
+import { rateRequestSchema, rateQuoteSchema } from "./../core/schema";
 import { AppError } from "./../utils/error";
+import { z } from "zod";
 
 export class UPSCarrier implements Carrier {
 async getRates(request: RateRequest): Promise<RateQuote[]> {
@@ -57,11 +58,25 @@ private parseResponse(response: any): RateQuote[] {
     throw new AppError("Invalid UPS response format", 502, response);
   }
 
-  return shipments.map((s: any) => ({
+  // normalize 
+  const normalized = shipments.map((s: any) => ({
     carrier: "UPS",
     service: s?.Service?.Code || "UNKNOWN",
     amount: Number(s?.TotalCharges?.MonetaryValue || 0),
     currency: s?.TotalCharges?.CurrencyCode || "USD",
   }));
+
+  // validate normalized output
+  const parsed = z.array(rateQuoteSchema).safeParse(normalized);
+
+  if (!parsed.success) {
+    throw new AppError(
+      "Invalid normalized rate quotes",
+      500,
+      parsed.error.flatten()
+    );
+  }
+
+  return parsed.data;
 }
 }
