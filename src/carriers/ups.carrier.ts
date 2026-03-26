@@ -21,9 +21,13 @@ async getRates(request: RateRequest): Promise<RateQuote[]> {
     const upsResponse = await this.callUPSApi(upsPayload, token);
 
     return this.parseResponse(upsResponse);
-  } catch (error: any) {
-    throw new AppError("UPS rate fetch failed", 500, error);
+  } catch (error: unknown) {
+  if (error instanceof AppError) {
+    throw error; 
   }
+
+  throw new AppError("UPS rate fetch failed", 500, error);
+}
 }
 
   private buildRequest(request: RateRequest) {
