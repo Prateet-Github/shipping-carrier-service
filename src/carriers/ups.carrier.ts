@@ -1,16 +1,28 @@
 import { Carrier } from "../core/carrier.interface";
 import { RateRequest, RateQuote } from "../core/types";
 import { getUPSToken } from "./ups.auth";
+import { rateRequestSchema } from "./../core/schema";
+import { AppError } from "./../utils/error";
 
 export class UPSCarrier implements Carrier {
-  async getRates(request: RateRequest): Promise<RateQuote[]> {
-  const token = await getUPSToken();
+async getRates(request: RateRequest): Promise<RateQuote[]> {
+  const parsed = rateRequestSchema.safeParse(request);
 
-  const upsPayload = this.buildRequest(request);
+  if (!parsed.success) {
+    throw new AppError("Invalid rate request", 400, parsed.error.flatten());
+  }
 
-  const upsResponse = await this.callUPSApi(upsPayload, token);
+  try {
+    const token = await getUPSToken();
 
-  return this.parseResponse(upsResponse);
+    const upsPayload = this.buildRequest(parsed.data);
+
+    const upsResponse = await this.callUPSApi(upsPayload, token);
+
+    return this.parseResponse(upsResponse);
+  } catch (error: any) {
+    throw new AppError("UPS rate fetch failed", 500, error);
+  }
 }
 
   private buildRequest(request: RateRequest) {
@@ -38,14 +50,18 @@ export class UPSCarrier implements Carrier {
   };
 }
 
-  private parseResponse(response: any): RateQuote[] {
-    const shipments = response?.RateResponse?.RatedShipment || [];
+private parseResponse(response: any): RateQuote[] {
+  const shipments = response?.RateResponse?.RatedShipment;
 
-    return shipments.map((s: any) => ({
-      carrier: "UPS",
-      service: s.Service.Code,
-      amount: Number(s.TotalCharges.MonetaryValue),
-      currency: s.TotalCharges.CurrencyCode,
-    }));
+  if (!shipments || !Array.isArray(shipments)) {
+    throw new AppError("Invalid UPS response format", 502, response);
   }
+
+  return shipments.map((s: any) => ({
+    carrier: "UPS",
+    service: s?.Service?.Code || "UNKNOWN",
+    amount: Number(s?.TotalCharges?.MonetaryValue || 0),
+    currency: s?.TotalCharges?.CurrencyCode || "USD",
+  }));
+}
 }
